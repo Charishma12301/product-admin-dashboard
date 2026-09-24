@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import {
@@ -18,7 +18,7 @@ import ProductCard from "../../components/ProductCard";
 import Pagination from "../../components/Pagination";
 import StatusMessage from "../../components/StatusMessage";
 
-export default function ProductsPage() {
+function ProductsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -48,7 +48,6 @@ export default function ProductsPage() {
   const sort = searchParams.get("sort") || "";
 
   const [searchInput, setSearchInput] = useState(search);
-
   const [total, setTotal] = useState(0);
 
   const updateUrl = (updates) => {
@@ -68,7 +67,13 @@ export default function ProductsPage() {
       }
     });
 
-    router.push(`/products?${params.toString()}`);
+    const queryString = params.toString();
+
+    router.push(
+      queryString
+        ? `/products?${queryString}`
+        : "/products"
+    );
   };
 
   useEffect(() => {
@@ -101,14 +106,14 @@ export default function ProductsPage() {
     const timer = setTimeout(() => {
       if (searchInput !== search) {
         updateUrl({
-          search: searchInput,
+          search: searchInput.trim(),
           page: 1,
         });
       }
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [searchInput]);
+  }, [searchInput, search]);
 
   useEffect(() => {
     if (!authenticated) return;
@@ -268,6 +273,10 @@ export default function ProductsPage() {
           (product) => product.id !== id
         )
       );
+
+      setTotal((currentTotal) =>
+        Math.max(currentTotal - 1, 0)
+      );
     } catch (error) {
       console.error(error);
 
@@ -360,5 +369,19 @@ export default function ProductsPage() {
         </>
       )}
     </main>
+  );
+}
+
+export default function ProductsPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="flex min-h-screen items-center justify-center bg-gray-100">
+          <p>Loading products...</p>
+        </main>
+      }
+    >
+      <ProductsContent />
+    </Suspense>
   );
 }
